@@ -3,149 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Falcone - Gestão de Membros e Nuvem</title>
+    <title>Falcone - Gestão com Webhook Discord</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
-        
-        :root {
-            --mafia-red: #8b0000;
-            --mafia-gold: #c5a059;
-            --mafia-dark: #0a0a0a;
-            --mafia-slate: #1a1a1a;
-        }
-
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: var(--mafia-dark); 
-            color: #e2e8f0;
-            background-image: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
-            overflow-x: hidden;
-        }
-
-        h1, h2, h3, .mafia-font { 
-            font-family: 'Cinzel', serif; 
-            letter-spacing: 1px;
-        }
-
-        .mafia-card { 
-            background: linear-gradient(145deg, #161616, #0f0f0f);
-            border: 1px solid #2a2a2a;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
+        :root { --mafia-red: #8b0000; --mafia-gold: #c5a059; --mafia-dark: #0a0a0a; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--mafia-dark); color: #e2e8f0; background-image: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%); overflow-x: hidden; }
+        h1, h2, h3, .mafia-font { font-family: 'Cinzel', serif; letter-spacing: 1px; }
+        .mafia-card { background: linear-gradient(145deg, #161616, #0f0f0f); border: 1px solid #2a2a2a; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .mafia-border-gold { border-color: var(--mafia-gold); }
         .mafia-text-gold { color: var(--mafia-gold); }
-        
-        .mafia-btn-red {
-            background: linear-gradient(to bottom, #8b0000, #5a0000);
-            border: 1px solid #4a0000;
-            transition: all 0.3s ease;
-        }
-        .mafia-btn-red:hover {
-            filter: brightness(1.2);
-            box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
-        }
-
-        .tab-active { 
-            color: var(--mafia-gold);
-            border-bottom: 2px solid var(--mafia-gold);
-            text-shadow: 0 0 10px rgba(197, 160, 89, 0.3);
-        }
-
-        input, select, textarea {
-            background-color: #0f0f0f !important;
-            border: 1px solid #333 !important;
-            color: #ccc !important;
-        }
-        input:focus, select:focus, textarea:focus {
-            border-color: var(--mafia-gold) !important;
-            outline: none;
-        }
-
-        .smoke-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            opacity: 0.05;
-            background: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
-            z-index: -1;
-        }
-
-        #shared-notes {
-            min-height: 400px;
-            font-family: 'Courier New', Courier, monospace;
-            line-height: 1.6;
-            background-image: linear-gradient(#1a1a1a 1.1em, #222 1.2em);
-            background-size: 100% 1.2em;
-        }
-
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: #c5a059; }
+        .mafia-btn-red { background: linear-gradient(to bottom, #8b0000, #5a0000); border: 1px solid #4a0000; transition: all 0.3s ease; }
+        .mafia-btn-red:hover { filter: brightness(1.2); box-shadow: 0 0 15px rgba(139, 0, 0, 0.4); }
+        .tab-active { color: var(--mafia-gold); border-bottom: 2px solid var(--mafia-gold); }
+        input, select, textarea { background-color: #0f0f0f !important; border: 1px solid #333 !important; color: #ccc !important; }
+        #shared-notes { min-height: 400px; font-family: 'Courier New', Courier, monospace; background-image: linear-gradient(#1a1a1a 1.1em, #222 1.2em); background-size: 100% 1.2em; }
     </style>
 </head>
 <body class="min-h-screen">
-    <div class="smoke-bg"></div>
-    
-    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto transition-opacity duration-500 opacity-0">
+    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto opacity-0 transition-opacity duration-500">
         
         <!-- LOGIN / REGISTO -->
         <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 hidden px-4">
             <div class="mafia-card p-8 md:p-10 rounded-none border-t-4 border-b-4 mafia-border-gold w-full max-w-md shadow-2xl">
                 <div class="text-center mb-8">
                     <h2 class="text-4xl font-black mafia-text-gold uppercase mb-2">Falcone</h2>
-                    <div class="h-px bg-gradient-to-r from-transparent via-[#c5a059] to-transparent w-full mb-4"></div>
-                    <p class="text-slate-500 text-[10px] italic tracking-widest uppercase font-bold">Acesso Remoto via Nuvem</p>
+                    <p class="text-slate-500 text-[10px] italic tracking-widest uppercase font-bold">Autenticação de Membro</p>
                 </div>
 
                 <div id="login-form" class="space-y-5">
                     <div>
-                        <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Passaporte (ID)</label>
-                        <input type="number" id="login-citizenid" placeholder="ID da Cidade" class="w-full rounded-none px-4 py-2">
+                        <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">ID do Passaporte</label>
+                        <input type="number" id="login-citizenid" class="w-full rounded-none px-4 py-2">
                     </div>
                     <div id="login-admin-box" class="hidden">
-                        <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase tracking-tighter">Chave de Administração</label>
-                        <input type="password" id="login-admin-pass" placeholder="Senha da Cúpula" class="w-full rounded-none px-4 py-2 border-amber-900">
+                        <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase tracking-tighter">Senha Administrativa</label>
+                        <input type="password" id="login-admin-pass" class="w-full rounded-none px-4 py-2 border-amber-900">
                     </div>
-                    <button id="btn-login" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Entrar na Armaria</button>
-                    <div class="text-center">
-                        <button onclick="toggleAuth('register')" class="text-[9px] text-slate-500 hover:text-white uppercase tracking-widest underline">Criar Acesso Local</button>
-                    </div>
+                    <button id="btn-login" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Entrar</button>
+                    <button onclick="toggleAuth('register')" class="w-full text-[9px] text-slate-500 uppercase underline mt-4">Novo Membro</button>
                 </div>
 
                 <div id="register-form" class="space-y-5 hidden">
-                    <div>
-                        <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Nome de Batismo (RP)</label>
-                        <input type="text" id="reg-rpname" placeholder="Ex: Vito Scaletta" class="w-full rounded-none px-4 py-2">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Passaporte (ID)</label>
-                            <input type="number" id="reg-citizenid" class="w-full rounded-none px-4 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Hierarquia</label>
-                            <select id="reg-role" class="w-full rounded-none px-4 py-2 text-white text-xs">
-                                <option value="Membro">Soldato (Membro)</option>
-                                <option value="Moderador">Consigliere (Mod)</option>
-                                <option value="Administrador">Don (Admin)</option>
-                            </select>
-                        </div>
+                    <input type="text" id="reg-rpname" placeholder="Nome Completo (RP)" class="w-full rounded-none px-4 py-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="reg-citizenid" placeholder="ID" class="w-full rounded-none px-4 py-2">
+                        <select id="reg-role" class="w-full rounded-none px-4 py-2 text-xs">
+                            <option value="Membro">Membro</option>
+                            <option value="Moderador">Moderador</option>
+                            <option value="Administrador">Administrador</option>
+                        </select>
                     </div>
                     <div id="reg-admin-key-box" class="hidden">
-                        <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase tracking-tighter">Senha de Autorização</label>
-                        <input type="password" id="reg-admin-pass" placeholder="Chave da Família" class="w-full rounded-none px-4 py-2 border-amber-900">
+                        <input type="password" id="reg-admin-pass" placeholder="Senha da Hierarquia" class="w-full rounded-none px-4 py-2">
                     </div>
-                    <button id="btn-register" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Prestar Juramento</button>
-                    <div class="text-center">
-                        <button onclick="toggleAuth('login')" class="text-[9px] text-slate-500 hover:text-white uppercase tracking-widest underline">Já tem acesso? Login</button>
-                    </div>
+                    <button id="btn-register" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase text-sm">Registrar</button>
+                    <button onclick="toggleAuth('login')" class="w-full text-[9px] text-slate-500 uppercase underline mt-4">Já tenho conta</button>
                 </div>
             </div>
         </div>
@@ -154,103 +71,75 @@
         <div id="dashboard" class="hidden">
             <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 border-b border-white/5 pb-6">
                 <div>
-                    <h1 class="text-3xl font-black mafia-text-gold uppercase tracking-tighter">La Famiglia <span class="text-white/20">|</span> Armaria</h1>
-                    <div class="flex items-center gap-3 mt-2">
-                        <span id="role-badge" class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border mafia-border-gold mafia-text-gold"></span>
-                        <p class="text-slate-500 text-xs">Associado: <span id="user-display" class="text-slate-300 font-semibold"></span></p>
-                    </div>
+                    <h1 class="text-3xl font-black mafia-text-gold uppercase tracking-tighter">Falcone Sincronizado</h1>
+                    <p class="text-slate-500 text-xs">Acessando como: <span id="user-display" class="text-slate-300"></span> (<span id="role-display" class="mafia-text-gold"></span>)</p>
                 </div>
-                <nav class="flex gap-8 w-full md:w-auto overflow-x-auto mafia-font text-sm uppercase font-bold tracking-widest">
-                    <button onclick="showSection('inventory')" id="tab-inventory" class="pb-2 px-1 transition-all tab-active">O Baú</button>
-                    <button onclick="showSection('notes')" id="tab-notes" class="pb-2 px-1 transition-all text-slate-500">Quadro</button>
-                    <button onclick="showSection('logs')" id="tab-logs" class="pb-2 px-1 transition-all text-slate-500">Registos</button>
-                    <button onclick="showSection('admin')" id="tab-admin" class="pb-2 px-1 transition-all text-slate-500 hidden">Gestão</button>
-                    <button onclick="showSection('manage')" id="tab-manage" class="pb-2 px-1 transition-all text-slate-500 hidden">Catálogo</button>
+                <nav class="flex gap-6 mafia-font text-[12px] uppercase font-bold overflow-x-auto w-full md:w-auto">
+                    <button onclick="showSection('inventory')" id="tab-inventory" class="pb-2 tab-active">Baú</button>
+                    <button onclick="showSection('notes')" id="tab-notes" class="pb-2 text-slate-500">Notas</button>
+                    <button onclick="showSection('logs')" id="tab-logs" class="pb-2 text-slate-500">Histórico</button>
+                    <button onclick="showSection('config')" id="tab-config" class="pb-2 text-slate-500 hidden">Configurações</button>
                 </nav>
-                <button onclick="logout()" class="text-red-800 text-[10px] hover:text-red-500 uppercase font-black tracking-widest underline">Sair</button>
+                <button onclick="logout()" class="text-red-700 text-[10px] font-bold uppercase underline">Sair</button>
             </header>
 
-            <!-- ABA INVENTÁRIO -->
-            <section id="inventory-section" class="space-y-10">
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6" id="inventory-grid"></div>
-                <div class="mafia-card p-8 border-l-4 mafia-border-gold">
-                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest">Movimentação</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <select id="move-item-select" class="rounded-none px-4 py-3 text-sm"></select>
-                        <input type="number" id="move-qty" placeholder="Quantidade" class="rounded-none px-4 py-3 text-sm">
-                        <select id="move-action" class="rounded-none px-4 py-3 text-sm">
-                            <option value="deposit">Abastecer (+)</option>
+            <!-- Seções -->
+            <section id="inventory-section">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-10" id="inventory-grid"></div>
+                <div class="mafia-card p-6">
+                    <h3 class="mafia-font text-lg mafia-text-gold mb-4 uppercase">Movimentar</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <select id="move-item-select" class="px-4 py-2 text-sm"></select>
+                        <input type="number" id="move-qty" placeholder="Quantidade" class="px-4 py-2 text-sm">
+                        <select id="move-action" class="px-4 py-2 text-sm">
+                            <option value="deposit">Guardar (+)</option>
                             <option value="withdraw">Retirar (-)</option>
                         </select>
-                        <button id="btn-process-move" class="mafia-btn-red py-3 text-white mafia-font font-bold uppercase text-sm tracking-widest">Executar</button>
+                        <button id="btn-process-move" class="mafia-btn-red py-2 text-white font-bold uppercase text-xs">Confirmar</button>
                     </div>
                 </div>
             </section>
 
-            <!-- ABA QUADRO -->
             <section id="notes-section" class="hidden">
-                <div class="mafia-card p-6 md:p-10 relative">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="mafia-font text-xl mafia-text-gold uppercase tracking-widest">Avisos da Família</h3>
-                        <div class="flex items-center gap-4">
-                            <span id="saving-notes" class="hidden text-[8px] text-slate-600 uppercase font-bold">Sincronizando...</span>
-                            <button id="admin-clear-btn" onclick="clearNotes()" class="hidden text-red-900 text-[9px] uppercase font-bold underline">Limpar</button>
-                        </div>
+                <div class="mafia-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="mafia-font text-lg mafia-text-gold uppercase">Quadro da Nuvem</h3>
+                        <span id="saving-notes" class="hidden text-[10px] text-slate-500 uppercase italic">Salvando no Discord...</span>
                     </div>
-                    <textarea id="shared-notes" placeholder="Planos..." class="w-full p-6 text-slate-300 border-none resize-none focus:ring-0 rounded-none text-sm"></textarea>
+                    <textarea id="shared-notes" class="w-full p-6 text-sm text-slate-300 resize-none rounded-none focus:ring-0"></textarea>
                 </div>
             </section>
 
-            <!-- ABA REGISTOS GERAIS -->
             <section id="logs-section" class="hidden">
-                <div class="mafia-card overflow-hidden">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-black/50 mafia-text-gold">
-                            <tr><th class="p-5 uppercase text-[11px]">Momento</th><th class="p-5 uppercase text-[11px]">Soldato</th><th class="p-5 uppercase text-[11px]">Tipo</th><th class="p-5 uppercase text-[11px]">Item</th><th class="p-5 text-center text-[11px]">Qtd</th></tr>
+                <div class="mafia-card overflow-hidden text-xs">
+                    <table class="w-full text-left">
+                        <thead class="bg-black/50 mafia-text-gold font-bold">
+                            <tr><th class="p-4">Hora</th><th class="p-4">Membro</th><th class="p-4">Ação</th><th class="p-4">Item</th><th class="p-4">Qtd</th></tr>
                         </thead>
                         <tbody id="logs-table-body" class="divide-y divide-white/5"></tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- ABA GESTÃO (EXCLUSIVA ADMIN) -->
-            <section id="admin-section" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Lista de Membros -->
-                <div class="mafia-card p-6 h-fit">
-                    <h3 class="mafia-font text-lg mafia-text-gold mb-6 uppercase tracking-widest">Membros da Família</h3>
-                    <div id="member-list-container" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        <!-- Membros aqui -->
+            <!-- Seção de Admin (Discord Webhook) -->
+            <section id="config-section" class="hidden space-y-6">
+                <div class="mafia-card p-6 border-l-4 border-amber-600">
+                    <h3 class="mafia-font text-lg mafia-text-gold mb-4 uppercase">Integração Discord</h3>
+                    <p class="text-[10px] text-slate-500 mb-4">Insira o link do Webhook para enviar os logs do baú para um canal do Discord.</p>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <input type="password" id="webhook-url" placeholder="https://discord.com/api/webhooks/..." class="flex-1 px-4 py-3 text-xs font-mono">
+                        <button id="btn-save-webhook" class="bg-amber-700/20 border border-amber-600 px-6 py-3 text-[10px] font-bold uppercase hover:bg-amber-600 transition-colors">Salvar Webhook</button>
                     </div>
                 </div>
-                <!-- Histórico Individual -->
-                <div class="lg:col-span-2 mafia-card p-6">
-                    <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-                        <h3 class="mafia-font text-lg mafia-text-gold uppercase tracking-widest">Histórico: <span id="history-target-name" class="text-white">Selecione um membro</span></h3>
-                    </div>
-                    <div class="overflow-hidden">
-                        <table class="w-full text-left text-xs">
-                            <thead class="text-slate-500 uppercase tracking-widest border-b border-white/5">
-                                <tr><th class="py-3">Data</th><th class="py-3">Ação</th><th class="py-3">Item</th><th class="py-3 text-center">Qtd</th></tr>
-                            </thead>
-                            <tbody id="individual-logs-body" class="divide-y divide-white/5">
-                                <tr><td colspan="4" class="py-10 text-center text-slate-600 italic">Clique num membro para ver as suas movimentações.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
 
-            <!-- ABA CATÁLOGO -->
-            <section id="manage-section" class="hidden space-y-8">
-                <div class="mafia-card p-8 border-l-4 mafia-border-gold">
-                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest text-center md:text-left">Cadastrar Novo Item</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <input type="text" id="new-item-name" placeholder="Nome do Item" class="rounded-none px-4 py-3">
-                        <input type="text" id="new-item-icon" placeholder="Emoji (Ex: 🔫)" class="rounded-none px-4 py-3 text-center">
-                        <button id="btn-register-item" class="bg-white/10 hover:bg-white/20 py-3 mafia-font font-bold uppercase text-sm">Adicionar ao Sistema</button>
+                <div class="mafia-card p-6 border-l-4 mafia-border-gold">
+                    <h3 class="mafia-font text-lg mafia-text-gold mb-4 uppercase">Gestão de Catálogo</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" id="new-item-name" placeholder="Nome do Item" class="px-4 py-2">
+                        <input type="text" id="new-item-icon" placeholder="Emoji" class="px-4 py-2 text-center">
+                        <button id="btn-add-item" class="bg-white/5 hover:bg-white/10 py-2 font-bold uppercase text-xs">Adicionar ao Sistema</button>
                     </div>
                 </div>
-                <div id="library-list" class="flex flex-wrap gap-2"></div>
             </section>
         </div>
     </div>
@@ -260,286 +149,271 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const ADMIN_PASSCODE = "sua_senha_aqui_123";
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
+        const ADMIN_PASS = "159753Falcone"; 
+        
+        const isPreview = typeof __firebase_config !== 'undefined';
+        const config = isPreview ? JSON.parse(__firebase_config) : {
+            apiKey: "COLE_AQUI_SEU_FIREBASE",
+            authDomain: "SEU_PROJETO.firebaseapp.com",
+            projectId: "SEU_PROJETO",
+            storageBucket: "SEU_PROJETO.appspot.com",
+            messagingSenderId: "12345678",
+            appId: "1:1234:web:abc"
+        };
+
+        const app = initializeApp(config);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mafia-falcone-v2';
+        const appId = isPreview ? __app_id : 'falcone-gestao-online';
 
-        const publicDataPath = (col) => collection(db, 'artifacts', appId, 'public', 'data', col);
-        const publicDocPath = (col, id) => doc(db, 'artifacts', appId, 'public', 'data', col, id);
+        const getCol = (c) => collection(db, 'artifacts', appId, 'public', 'data', c);
+        const getRef = (c, id) => doc(db, 'artifacts', appId, 'public', 'data', c, id);
 
-        let currentUser = JSON.parse(sessionStorage.getItem('mafia_user')) || null;
-        let allLogs = [];
+        let user = JSON.parse(sessionStorage.getItem('f_user')) || null;
+        let webhookUrl = "";
 
-        // --- AUTH ---
+        // Autenticação
         async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (e) { console.error(e); }
+            if (isPreview && typeof __initial_auth_token !== 'undefined') {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
         }
 
         onAuthStateChanged(auth, (u) => {
             if (u) {
                 document.getElementById('app').style.opacity = "1";
-                if (currentUser) initDashboard();
+                if (user) initApp();
                 else document.getElementById('auth-screen').classList.remove('hidden');
             }
         });
 
         initAuth();
 
-        // --- DASHBOARD ---
-        function initDashboard() {
+        // App Central
+        async function initApp() {
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('user-display').innerText = currentUser.rpName;
-            document.getElementById('role-badge').innerText = currentUser.role;
+            document.getElementById('user-display').innerText = user.rpName;
+            document.getElementById('role-display').innerText = user.role;
             
-            if(currentUser.role !== 'Membro') {
-                document.getElementById('tab-admin').classList.remove('hidden');
-                document.getElementById('tab-manage').classList.remove('hidden');
-                document.getElementById('admin-clear-btn').classList.remove('hidden');
-                loadMembers();
-            }
-
-            onSnapshot(publicDataPath('inventory'), (snap) => renderInventory(snap.docs.map(d => d.data())));
-            onSnapshot(publicDataPath('library'), (snap) => renderLibrary(snap.docs.map(d => d.data())));
-            onSnapshot(publicDataPath('logs'), (snap) => {
-                allLogs = snap.docs.map(d => d.data()).sort((a,b) => b.timestamp?.seconds - a.timestamp?.seconds);
-                renderLogs(allLogs);
-            });
-            onSnapshot(publicDocPath('metadata', 'notes'), (d) => {
-                if(d.exists() && document.activeElement.id !== 'shared-notes') {
-                    document.getElementById('shared-notes').value = d.data().content;
+            if(user.role === 'Administrador') {
+                document.getElementById('tab-config').classList.remove('hidden');
+                const wSnap = await getDoc(getRef('config', 'discord'));
+                if(wSnap.exists()) {
+                    webhookUrl = wSnap.data().url;
+                    document.getElementById('webhook-url').value = webhookUrl;
                 }
-            });
-        }
-
-        // --- GESTÃO DE MEMBROS ---
-        async function loadMembers() {
-            onSnapshot(publicDataPath('users'), (snap) => {
-                const container = document.getElementById('member-list-container');
-                container.innerHTML = '';
-                snap.docs.forEach(doc => {
-                    const u = doc.data();
-                    const div = document.createElement('div');
-                    div.className = "p-4 border border-white/5 hover:border-[#c5a059] cursor-pointer transition-all bg-black/20 flex justify-between items-center";
-                    div.innerHTML = `
-                        <div>
-                            <p class="text-sm font-bold text-white">${u.rpName}</p>
-                            <p class="text-[9px] text-slate-500 uppercase">ID: ${u.citizenId} | ${u.role}</p>
-                        </div>
-                        <span class="text-[10px] mafia-text-gold font-bold">→</span>
-                    `;
-                    div.onclick = () => showIndividualHistory(u);
-                    container.appendChild(div);
-                });
-            });
-        }
-
-        function showIndividualHistory(user) {
-            document.getElementById('history-target-name').innerText = user.rpName;
-            const body = document.getElementById('individual-logs-body');
-            body.innerHTML = '';
-
-            const filtered = allLogs.filter(l => l.userCitizenId === user.citizenId);
-
-            if(filtered.length === 0) {
-                body.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-slate-500 italic">Nenhuma atividade registada para este membro.</td></tr>`;
-                return;
             }
 
-            filtered.forEach(l => {
-                const date = l.timestamp ? new Date(l.timestamp.seconds * 1000).toLocaleDateString() : '...';
-                body.innerHTML += `
-                    <tr>
-                        <td class="py-3 text-slate-500 font-mono">${date}</td>
-                        <td class="py-3 font-bold ${l.type === '+' ? 'text-green-600' : 'text-red-700'}">${l.type === '+' ? 'DEPÓSITO' : 'RETIRADA'}</td>
-                        <td class="py-3 text-slate-300">${l.item}</td>
-                        <td class="py-3 text-center font-black mafia-text-gold">x${l.qty}</td>
-                    </tr>
-                `;
+            // Listeners em Tempo Real
+            onSnapshot(getCol('inventory'), (snap) => {
+                const data = snap.docs.map(d => d.data());
+                renderInventory(data);
+                updateSelect(data);
+            });
+
+            onSnapshot(getCol('logs'), (snap) => {
+                renderLogs(snap.docs.map(d => d.data()).sort((a,b) => b.timestamp?.seconds - a.timestamp?.seconds));
+            });
+
+            onSnapshot(getRef('metadata', 'notes'), (d) => {
+                const el = document.getElementById('shared-notes');
+                if(d.exists() && document.activeElement !== el) el.value = d.data().content;
             });
         }
 
-        // --- RENDERIZAÇÃO ---
+        // --- Renderização ---
         function renderInventory(items) {
             const grid = document.getElementById('inventory-grid');
             grid.innerHTML = '';
             items.filter(i => i.quantity > 0).forEach(i => {
                 grid.innerHTML += `
-                    <div class="mafia-card p-6 text-center border-t border-white/5">
-                        <div class="text-4xl mb-4">${i.icon}</div>
-                        <div class="text-[9px] font-black mafia-text-gold uppercase mb-1">${i.label}</div>
-                        <div class="text-3xl font-black text-white">${i.quantity}</div>
-                    </div>`;
+                <div class="mafia-card p-4 text-center">
+                    <div class="text-3xl mb-2">${i.icon}</div>
+                    <div class="text-[8px] font-bold mafia-text-gold uppercase truncate">${i.label}</div>
+                    <div class="text-2xl font-black">${i.quantity}</div>
+                </div>`;
             });
         }
 
-        function renderLibrary(lib) {
-            const select = document.getElementById('move-item-select');
-            const list = document.getElementById('library-list');
-            list.innerHTML = '';
-            select.innerHTML = '<option value="">Selecionar Item...</option>';
-            lib.sort((a,b) => a.label.localeCompare(b.label)).forEach(item => {
-                select.innerHTML += `<option value="${item.id}">${item.icon} ${item.label}</option>`;
-                list.innerHTML += `<div class="bg-black/40 border border-white/5 px-3 py-1 text-[10px] uppercase text-slate-400">${item.icon} ${item.label}</div>`;
+        function updateSelect(items) {
+            const s = document.getElementById('move-item-select');
+            const current = s.value;
+            s.innerHTML = '<option value="">Escolher Item...</option>';
+            items.sort((a,b) => a.label.localeCompare(b.label)).forEach(i => {
+                s.innerHTML += `<option value="${i.id}">${i.icon} ${i.label}</option>`;
             });
+            s.value = current;
         }
 
         function renderLogs(logs) {
             const body = document.getElementById('logs-table-body');
             body.innerHTML = '';
-            logs.slice(0, 20).forEach(l => {
-                const date = l.timestamp ? new Date(l.timestamp.seconds * 1000).toLocaleTimeString() : '...';
+            logs.slice(0, 15).forEach(l => {
+                const time = l.timestamp ? new Date(l.timestamp.seconds * 1000).toLocaleTimeString() : '...';
                 body.innerHTML += `
-                    <tr>
-                        <td class="p-4 text-[10px] text-slate-500 font-mono">${date}</td>
-                        <td class="p-4 text-xs font-bold text-slate-300">${l.user}</td>
-                        <td class="p-4 text-[10px] font-black ${l.type === '+' ? 'text-green-700' : 'text-red-800'}">${l.type === '+' ? 'ABASTECEU' : 'RETIROU'}</td>
-                        <td class="p-4 text-xs italic">${l.item}</td>
-                        <td class="p-4 text-center font-black mafia-text-gold">x${l.qty}</td>
-                    </tr>`;
+                <tr>
+                    <td class="p-4 text-slate-500 font-mono">${time}</td>
+                    <td class="p-4 font-bold text-slate-300">${l.user}</td>
+                    <td class="p-4 font-black ${l.type === '+' ? 'text-green-700' : 'text-red-800'}">${l.type === '+' ? 'GUARDOU' : 'RETIROU'}</td>
+                    <td class="p-4 italic">${l.item}</td>
+                    <td class="p-4 text-center mafia-text-gold">x${l.qty}</td>
+                </tr>`;
             });
         }
 
-        // --- AÇÕES ---
-        async function processMovement() {
+        // --- Webhook Discord Logic ---
+        async function sendToDiscord(message, color = 12976128) { // Default Gold color
+            const snap = await getDoc(getRef('config', 'discord'));
+            const url = snap.exists() ? snap.data().url : "";
+            
+            if(!url) return;
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        embeds: [{
+                            title: "🦅 Log do Sistema Falcone",
+                            description: message,
+                            color: color,
+                            footer: { text: "Gestão Cloud Falcone" },
+                            timestamp: new Date().toISOString()
+                        }]
+                    })
+                });
+            } catch (e) { console.error("Discord Error", e); }
+        }
+
+        // --- Ações ---
+        async function handleMove() {
             const id = document.getElementById('move-item-select').value;
             const qty = parseInt(document.getElementById('move-qty').value);
             const action = document.getElementById('move-action').value;
-            if(!id || isNaN(qty) || qty <= 0) return notify("Dados inválidos.", "error");
 
-            const itemRef = publicDocPath('inventory', id);
-            const libSnap = await getDoc(publicDocPath('library', id));
-            const itemSnap = await getDoc(itemRef);
+            if(!id || isNaN(qty) || qty <= 0) return;
 
-            const itemData = libSnap.data();
-            let currentQty = itemSnap.exists() ? itemSnap.data().quantity : 0;
+            const itemRef = getRef('inventory', id);
+            const snap = await getDoc(itemRef);
+            const currentData = snap.data();
+            let currentQty = snap.exists() ? currentData.quantity : 0;
 
-            if(action === 'withdraw' && currentQty < qty) return notify("Stock insuficiente.", "error");
+            if(action === 'withdraw' && currentQty < qty) return alert("Quantidade insuficiente!");
 
-            const newQty = action === 'deposit' ? currentQty + qty : currentQty - qty;
+            const finalQty = action === 'deposit' ? currentQty + qty : currentQty - qty;
+            await setDoc(itemRef, { ...currentData, quantity: finalQty }, { merge: true });
 
-            await setDoc(itemRef, { ...itemData, quantity: newQty }, { merge: true });
-
-            await addDoc(publicDataPath('logs'), {
-                user: currentUser.rpName,
-                userCitizenId: currentUser.citizenId, // ID guardado para filtro de gestão
-                item: itemData.label,
-                qty: qty,
+            await addDoc(getCol('logs'), {
+                user: user.rpName,
+                item: currentData.label,
+                qty,
                 type: action === 'deposit' ? '+' : '-',
                 timestamp: serverTimestamp()
             });
 
-            notify("Baú atualizado.", "success");
+            // Log no Discord
+            const dColor = action === 'deposit' ? 3066993 : 15158332; // Verde vs Vermelho
+            const actionText = action === 'deposit' ? "guardou" : "retirou";
+            sendToDiscord(`**Membro:** ${user.rpName} (ID: ${user.citizenId})\n**Ação:** ${actionText.toUpperCase()}\n**Item:** ${currentData.icon} ${currentData.label}\n**Quantidade:** x${qty}\n**Total no Baú:** ${finalQty}`, dColor);
+
             document.getElementById('move-qty').value = '';
         }
 
-        async function registerNewItem() {
-            const name = document.getElementById('new-item-name').value.trim();
+        async function handleAddLibrary() {
+            const name = document.getElementById('new-item-name').value;
             const icon = document.getElementById('new-item-icon').value || "📦";
             if(!name) return;
             const id = name.toLowerCase().replace(/\s+/g, '_');
-            await setDoc(publicDocPath('library', id), { id, label: name, icon });
+            await setDoc(getRef('inventory', id), { id, label: name, icon, quantity: 0 });
             document.getElementById('new-item-name').value = '';
-            notify("Item adicionado ao catálogo.", "success");
+            sendToDiscord(`🆕 **Novo Item Cadastrado:** ${icon} ${name} por ${user.rpName}`);
         }
 
+        async function handleSaveWebhook() {
+            const url = document.getElementById('webhook-url').value.trim();
+            if(!url.includes("discord.com/api/webhooks")) return alert("URL de Webhook inválida.");
+            await setDoc(getRef('config', 'discord'), { url });
+            webhookUrl = url;
+            alert("Webhook salvo com sucesso!");
+            sendToDiscord("✅ **Sistema de Notificações Ativado!**");
+        }
+
+        // --- Auth Funcs ---
         async function handleLogin() {
             const cid = document.getElementById('login-citizenid').value;
-            if(!cid) return;
-            const userSnap = await getDoc(publicDocPath('users', cid));
-            if(!userSnap.exists()) return notify("ID inexistente.", "error");
-
-            const user = userSnap.data();
-            if(user.role !== 'Membro') {
-                const passBox = document.getElementById('login-admin-box');
-                const passInput = document.getElementById('login-admin-pass');
-                if(passBox.classList.contains('hidden')) {
-                    passBox.classList.remove('hidden');
-                    return notify("Chave administrativa necessária.", "warning");
+            const snap = await getDoc(getRef('users', cid));
+            if(!snap.exists()) return alert("ID não registrado.");
+            
+            const uData = snap.data();
+            if(uData.role !== 'Membro') {
+                const pBox = document.getElementById('login-admin-box');
+                if(pBox.classList.contains('hidden')) {
+                    pBox.classList.remove('hidden');
+                    return alert("Cargos hierárquicos requerem senha.");
                 }
-                if(passInput.value !== ADMIN_PASSCODE) return notify("Chave incorreta.", "error");
+                if(document.getElementById('login-admin-pass').value !== ADMIN_PASS) return alert("Senha errada.");
             }
 
-            currentUser = user;
-            sessionStorage.setItem('mafia_user', JSON.stringify(user));
-            initDashboard();
+            user = uData;
+            sessionStorage.setItem('f_user', JSON.stringify(user));
+            initApp();
         }
 
         async function handleRegister() {
-            const rpName = document.getElementById('reg-rpname').value.trim();
-            const cid = document.getElementById('reg-citizenid').value.trim();
+            const rpName = document.getElementById('reg-rpname').value;
+            const cid = document.getElementById('reg-citizenid').value;
             const role = document.getElementById('reg-role').value;
             const pass = document.getElementById('reg-admin-pass').value;
 
-            if(!rpName || !cid) return notify("Campos vazios.", "error");
-            if(role !== 'Membro' && pass !== ADMIN_PASSCODE) return notify("Senha de autorização errada.", "error");
+            if(!rpName || !cid) return alert("Preencha os campos.");
+            if(role !== 'Membro' && pass !== ADMIN_PASS) return alert("Chave administrativa incorreta.");
 
-            const userRef = publicDocPath('users', cid);
-            if((await getDoc(userRef)).exists()) return notify("ID já registado.", "error");
-
-            const newUser = { rpName, citizenId: cid, role };
-            await setDoc(userRef, newUser);
-            currentUser = newUser;
-            sessionStorage.setItem('mafia_user', JSON.stringify(newUser));
-            initDashboard();
+            const uData = { rpName, citizenId: cid, role };
+            await setDoc(getRef('users', cid), uData);
+            user = uData;
+            sessionStorage.setItem('f_user', JSON.stringify(user));
+            initApp();
         }
 
-        // --- UTILS ---
-        let notesTimeout;
+        // --- Notas ---
+        let nt;
         document.getElementById('shared-notes').addEventListener('input', (e) => {
             document.getElementById('saving-notes').classList.remove('hidden');
-            clearTimeout(notesTimeout);
-            notesTimeout = setTimeout(async () => {
-                await setDoc(publicDocPath('metadata', 'notes'), { content: e.target.value }, { merge: true });
+            clearTimeout(nt);
+            nt = setTimeout(async () => {
+                await setDoc(getRef('metadata', 'notes'), { content: e.target.value }, { merge: true });
                 document.getElementById('saving-notes').classList.add('hidden');
-            }, 1000);
+            }, 1500);
         });
 
+        // UI Helpers
         window.toggleAuth = (m) => {
             document.getElementById('login-form').classList.toggle('hidden', m==='register');
             document.getElementById('register-form').classList.toggle('hidden', m==='login');
         };
 
         window.showSection = (s) => {
-            ['inventory', 'logs', 'manage', 'notes', 'admin'].forEach(id => {
-                const section = document.getElementById(id + '-section');
-                if(section) section.classList.toggle('hidden', id !== s);
+            ['inventory', 'logs', 'config', 'notes'].forEach(id => {
+                const sec = document.getElementById(id + '-section');
+                if(sec) sec.classList.toggle('hidden', id !== s);
                 const tab = document.getElementById('tab-' + id);
                 if(tab) tab.classList.toggle('tab-active', id === s);
+                if(tab) tab.classList.toggle('text-slate-500', id !== s);
             });
         };
 
-        window.clearNotes = async () => {
-            if(confirm("Limpar quadro?")) await setDoc(publicDocPath('metadata', 'notes'), { content: "" });
-        };
-
-        window.logout = () => { sessionStorage.removeItem('mafia_user'); location.reload(); };
-
-        function notify(m, t) {
-            const d = document.createElement('div');
-            let color = 'border-amber-600 text-amber-500';
-            if(t==='error') color = 'border-red-600 text-red-400 bg-red-950';
-            if(t==='warning') color = 'border-blue-600 text-blue-400 bg-blue-950';
-            d.className = `fixed bottom-6 right-6 px-6 py-3 border-l-4 text-[10px] z-[300] shadow-2xl bg-black ${color}`;
-            d.innerText = m.toUpperCase();
-            document.body.appendChild(d);
-            setTimeout(() => d.remove(), 3000);
-        }
+        window.logout = () => { sessionStorage.removeItem('f_user'); location.reload(); };
 
         document.getElementById('btn-login').onclick = handleLogin;
         document.getElementById('btn-register').onclick = handleRegister;
-        document.getElementById('btn-process-move').onclick = processMovement;
-        document.getElementById('btn-register-item').onclick = registerNewItem;
+        document.getElementById('btn-process-move').onclick = handleMove;
+        document.getElementById('btn-add-item').onclick = handleAddLibrary;
+        document.getElementById('btn-save-webhook').onclick = handleSaveWebhook;
         document.getElementById('reg-role').onchange = (e) => document.getElementById('reg-admin-key-box').classList.toggle('hidden', e.target.value === 'Membro');
+
     </script>
 </body>
 </html>
