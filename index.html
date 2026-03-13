@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Falcone - Sistema de Gestão Local</title>
+    <title>Falcone - Gestão de Membros e Nuvem</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
         
@@ -79,23 +84,26 @@
             background-image: linear-gradient(#1a1a1a 1.1em, #222 1.2em);
             background-size: 100% 1.2em;
         }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #c5a059; }
     </style>
 </head>
 <body class="min-h-screen">
     <div class="smoke-bg"></div>
     
-    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto transition-opacity duration-500">
+    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto transition-opacity duration-500 opacity-0">
         
-        <!-- LOGIN / REGISTRO -->
+        <!-- LOGIN / REGISTO -->
         <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 hidden px-4">
             <div class="mafia-card p-8 md:p-10 rounded-none border-t-4 border-b-4 mafia-border-gold w-full max-w-md shadow-2xl">
                 <div class="text-center mb-8">
                     <h2 class="text-4xl font-black mafia-text-gold uppercase mb-2">Falcone</h2>
                     <div class="h-px bg-gradient-to-r from-transparent via-[#c5a059] to-transparent w-full mb-4"></div>
-                    <p id="auth-title" class="text-slate-500 text-[10px] italic tracking-widest uppercase font-bold">Acesso Local de Segurança</p>
+                    <p class="text-slate-500 text-[10px] italic tracking-widest uppercase font-bold">Acesso Remoto via Nuvem</p>
                 </div>
 
-                <!-- Formulário de Login -->
                 <div id="login-form" class="space-y-5">
                     <div>
                         <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Passaporte (ID)</label>
@@ -105,13 +113,12 @@
                         <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase tracking-tighter">Chave de Administração</label>
                         <input type="password" id="login-admin-pass" placeholder="Senha da Cúpula" class="w-full rounded-none px-4 py-2 border-amber-900">
                     </div>
-                    <button onclick="handleLogin()" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Entrar na Armaria</button>
+                    <button id="btn-login" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Entrar na Armaria</button>
                     <div class="text-center">
                         <button onclick="toggleAuth('register')" class="text-[9px] text-slate-500 hover:text-white uppercase tracking-widest underline">Criar Acesso Local</button>
                     </div>
                 </div>
 
-                <!-- Formulário de Registro -->
                 <div id="register-form" class="space-y-5 hidden">
                     <div>
                         <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Nome de Batismo (RP)</label>
@@ -124,7 +131,7 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Hierarquia</label>
-                            <select id="reg-role" onchange="toggleAdminKeyField(this.value)" class="w-full rounded-none px-4 py-2 text-white text-xs">
+                            <select id="reg-role" class="w-full rounded-none px-4 py-2 text-white text-xs">
                                 <option value="Membro">Soldato (Membro)</option>
                                 <option value="Moderador">Consigliere (Mod)</option>
                                 <option value="Administrador">Don (Admin)</option>
@@ -135,7 +142,7 @@
                         <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase tracking-tighter">Senha de Autorização</label>
                         <input type="password" id="reg-admin-pass" placeholder="Chave da Família" class="w-full rounded-none px-4 py-2 border-amber-900">
                     </div>
-                    <button onclick="handleRegister()" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Prestar Juramento</button>
+                    <button id="btn-register" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Prestar Juramento</button>
                     <div class="text-center">
                         <button onclick="toggleAuth('login')" class="text-[9px] text-slate-500 hover:text-white uppercase tracking-widest underline">Já tem acesso? Login</button>
                     </div>
@@ -157,15 +164,17 @@
                     <button onclick="showSection('inventory')" id="tab-inventory" class="pb-2 px-1 transition-all tab-active">O Baú</button>
                     <button onclick="showSection('notes')" id="tab-notes" class="pb-2 px-1 transition-all text-slate-500">Quadro</button>
                     <button onclick="showSection('logs')" id="tab-logs" class="pb-2 px-1 transition-all text-slate-500">Registos</button>
+                    <button onclick="showSection('admin')" id="tab-admin" class="pb-2 px-1 transition-all text-slate-500 hidden">Gestão</button>
                     <button onclick="showSection('manage')" id="tab-manage" class="pb-2 px-1 transition-all text-slate-500 hidden">Catálogo</button>
                 </nav>
-                <button onclick="logout()" class="text-red-800 text-[10px] hover:text-red-500 uppercase font-black tracking-widest underline">Encerrar Sessão</button>
+                <button onclick="logout()" class="text-red-800 text-[10px] hover:text-red-500 uppercase font-black tracking-widest underline">Sair</button>
             </header>
 
+            <!-- ABA INVENTÁRIO -->
             <section id="inventory-section" class="space-y-10">
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6" id="inventory-grid"></div>
                 <div class="mafia-card p-8 border-l-4 mafia-border-gold">
-                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest flex items-center gap-3">Movimentação</h3>
+                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest">Movimentação</h3>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <select id="move-item-select" class="rounded-none px-4 py-3 text-sm"></select>
                         <input type="number" id="move-qty" placeholder="Quantidade" class="rounded-none px-4 py-3 text-sm">
@@ -173,21 +182,26 @@
                             <option value="deposit">Abastecer (+)</option>
                             <option value="withdraw">Retirar (-)</option>
                         </select>
-                        <button onclick="processMovement()" class="mafia-btn-red py-3 text-white mafia-font font-bold uppercase text-sm tracking-widest text-center">Executar</button>
+                        <button id="btn-process-move" class="mafia-btn-red py-3 text-white mafia-font font-bold uppercase text-sm tracking-widest">Executar</button>
                     </div>
                 </div>
             </section>
 
+            <!-- ABA QUADRO -->
             <section id="notes-section" class="hidden">
-                <div class="mafia-card p-6 md:p-10 border-t border-white/5 relative">
+                <div class="mafia-card p-6 md:p-10 relative">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="mafia-font text-xl mafia-text-gold uppercase tracking-widest">Quadro de Avisos</h3>
-                        <button id="admin-clear-btn" onclick="clearNotes()" class="hidden text-red-900 text-[9px] uppercase font-bold hover:text-red-500 underline">Limpar Quadro</button>
+                        <h3 class="mafia-font text-xl mafia-text-gold uppercase tracking-widest">Avisos da Família</h3>
+                        <div class="flex items-center gap-4">
+                            <span id="saving-notes" class="hidden text-[8px] text-slate-600 uppercase font-bold">Sincronizando...</span>
+                            <button id="admin-clear-btn" onclick="clearNotes()" class="hidden text-red-900 text-[9px] uppercase font-bold underline">Limpar</button>
+                        </div>
                     </div>
-                    <textarea id="shared-notes" placeholder="Escreva aqui planos ou avisos..." class="w-full p-6 text-slate-300 border-none resize-none focus:ring-0 rounded-none text-sm"></textarea>
+                    <textarea id="shared-notes" placeholder="Planos..." class="w-full p-6 text-slate-300 border-none resize-none focus:ring-0 rounded-none text-sm"></textarea>
                 </div>
             </section>
 
+            <!-- ABA REGISTOS GERAIS -->
             <section id="logs-section" class="hidden">
                 <div class="mafia-card overflow-hidden">
                     <table class="w-full text-left text-sm">
@@ -199,13 +213,41 @@
                 </div>
             </section>
 
+            <!-- ABA GESTÃO (EXCLUSIVA ADMIN) -->
+            <section id="admin-section" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Lista de Membros -->
+                <div class="mafia-card p-6 h-fit">
+                    <h3 class="mafia-font text-lg mafia-text-gold mb-6 uppercase tracking-widest">Membros da Família</h3>
+                    <div id="member-list-container" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                        <!-- Membros aqui -->
+                    </div>
+                </div>
+                <!-- Histórico Individual -->
+                <div class="lg:col-span-2 mafia-card p-6">
+                    <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                        <h3 class="mafia-font text-lg mafia-text-gold uppercase tracking-widest">Histórico: <span id="history-target-name" class="text-white">Selecione um membro</span></h3>
+                    </div>
+                    <div class="overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-slate-500 uppercase tracking-widest border-b border-white/5">
+                                <tr><th class="py-3">Data</th><th class="py-3">Ação</th><th class="py-3">Item</th><th class="py-3 text-center">Qtd</th></tr>
+                            </thead>
+                            <tbody id="individual-logs-body" class="divide-y divide-white/5">
+                                <tr><td colspan="4" class="py-10 text-center text-slate-600 italic">Clique num membro para ver as suas movimentações.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA CATÁLOGO -->
             <section id="manage-section" class="hidden space-y-8">
                 <div class="mafia-card p-8 border-l-4 mafia-border-gold">
-                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest">Novo Item</h3>
+                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest text-center md:text-left">Cadastrar Novo Item</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <input type="text" id="new-item-name" placeholder="Nome do Item" class="rounded-none px-4 py-3">
                         <input type="text" id="new-item-icon" placeholder="Emoji (Ex: 🔫)" class="rounded-none px-4 py-3 text-center">
-                        <button onclick="registerNewItem()" class="bg-white/10 hover:bg-white/20 py-3 mafia-font font-bold uppercase text-sm">Registrar no Catálogo</button>
+                        <button id="btn-register-item" class="bg-white/10 hover:bg-white/20 py-3 mafia-font font-bold uppercase text-sm">Adicionar ao Sistema</button>
                     </div>
                 </div>
                 <div id="library-list" class="flex flex-wrap gap-2"></div>
@@ -213,84 +255,44 @@
         </div>
     </div>
 
-    <script>
-        // --- SENHA MESTRE PARA ADMINS ---
-        const ADMIN_PASSCODE = "sua_senha_aqui_123"; 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const STORE = {
-            get: (key) => JSON.parse(localStorage.getItem('falcone_' + key)) || [],
-            save: (key, data) => localStorage.setItem('falcone_' + key, JSON.stringify(data)),
-            getObj: (key) => JSON.parse(localStorage.getItem('falcone_' + key)) || {}
-        };
+        const ADMIN_PASSCODE = "sua_senha_aqui_123";
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mafia-falcone-v2';
+
+        const publicDataPath = (col) => collection(db, 'artifacts', appId, 'public', 'data', col);
+        const publicDocPath = (col, id) => doc(db, 'artifacts', appId, 'public', 'data', col, id);
 
         let currentUser = JSON.parse(sessionStorage.getItem('mafia_user')) || null;
+        let allLogs = [];
 
-        // --- LÓGICA DE AUTENTICAÇÃO ---
-        window.toggleAuth = (m) => {
-            document.getElementById('login-form').classList.toggle('hidden', m==='register');
-            document.getElementById('register-form').classList.toggle('hidden', m==='login');
-        };
-
-        window.toggleAdminKeyField = (role) => {
-            document.getElementById('reg-admin-key-box').classList.toggle('hidden', role === 'Membro');
-        };
-
-        window.handleLogin = () => {
-            const cid = document.getElementById('login-citizenid').value;
-            const users = STORE.get('users');
-            const user = users.find(u => u.citizenId === cid);
-            
-            if(!user) return notify("ID não encontrado.", "error");
-
-            // Se for admin/mod, exige a senha no login
-            if(user.role !== 'Membro') {
-                const passBox = document.getElementById('login-admin-box');
-                const passInput = document.getElementById('login-admin-pass');
-                
-                if(passBox.classList.contains('hidden')) {
-                    passBox.classList.remove('hidden');
-                    notify("Confirme a senha administrativa.", "warning");
-                    return;
+        // --- AUTH ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
                 }
+            } catch (e) { console.error(e); }
+        }
 
-                if(passInput.value !== ADMIN_PASSCODE) {
-                    return notify("Senha administrativa incorreta.", "error");
-                }
+        onAuthStateChanged(auth, (u) => {
+            if (u) {
+                document.getElementById('app').style.opacity = "1";
+                if (currentUser) initDashboard();
+                else document.getElementById('auth-screen').classList.remove('hidden');
             }
+        });
 
-            currentUser = user;
-            sessionStorage.setItem('mafia_user', JSON.stringify(user));
-            initDashboard();
-        };
-
-        window.handleRegister = () => {
-            const rpName = document.getElementById('reg-rpname').value.trim();
-            const cid = document.getElementById('reg-citizenid').value.trim();
-            const role = document.getElementById('reg-role').value;
-            const pass = document.getElementById('reg-admin-pass').value;
-
-            if(!rpName || !cid) return notify("Preencha todos os campos.", "error");
-            
-            if(role !== 'Membro' && pass !== ADMIN_PASSCODE) {
-                return notify("Chave de autorização inválida!", "error");
-            }
-
-            const users = STORE.get('users');
-            if(users.some(u => u.citizenId === cid)) return notify("ID já registrado.", "error");
-
-            const newUser = { rpName, citizenId: cid, role };
-            users.push(newUser);
-            STORE.save('users', users);
-            
-            currentUser = newUser;
-            sessionStorage.setItem('mafia_user', JSON.stringify(newUser));
-            initDashboard();
-        };
-
-        window.logout = () => {
-            sessionStorage.removeItem('mafia_user');
-            location.reload();
-        };
+        initAuth();
 
         // --- DASHBOARD ---
         function initDashboard() {
@@ -299,23 +301,78 @@
             document.getElementById('user-display').innerText = currentUser.rpName;
             document.getElementById('role-badge').innerText = currentUser.role;
             
-            // Permissões Visuais
             if(currentUser.role !== 'Membro') {
+                document.getElementById('tab-admin').classList.remove('hidden');
                 document.getElementById('tab-manage').classList.remove('hidden');
                 document.getElementById('admin-clear-btn').classList.remove('hidden');
+                loadMembers();
             }
 
-            renderInventory();
-            renderLogs();
-            renderLibrary();
-            loadNotes();
+            onSnapshot(publicDataPath('inventory'), (snap) => renderInventory(snap.docs.map(d => d.data())));
+            onSnapshot(publicDataPath('library'), (snap) => renderLibrary(snap.docs.map(d => d.data())));
+            onSnapshot(publicDataPath('logs'), (snap) => {
+                allLogs = snap.docs.map(d => d.data()).sort((a,b) => b.timestamp?.seconds - a.timestamp?.seconds);
+                renderLogs(allLogs);
+            });
+            onSnapshot(publicDocPath('metadata', 'notes'), (d) => {
+                if(d.exists() && document.activeElement.id !== 'shared-notes') {
+                    document.getElementById('shared-notes').value = d.data().content;
+                }
+            });
         }
 
-        function renderInventory() {
+        // --- GESTÃO DE MEMBROS ---
+        async function loadMembers() {
+            onSnapshot(publicDataPath('users'), (snap) => {
+                const container = document.getElementById('member-list-container');
+                container.innerHTML = '';
+                snap.docs.forEach(doc => {
+                    const u = doc.data();
+                    const div = document.createElement('div');
+                    div.className = "p-4 border border-white/5 hover:border-[#c5a059] cursor-pointer transition-all bg-black/20 flex justify-between items-center";
+                    div.innerHTML = `
+                        <div>
+                            <p class="text-sm font-bold text-white">${u.rpName}</p>
+                            <p class="text-[9px] text-slate-500 uppercase">ID: ${u.citizenId} | ${u.role}</p>
+                        </div>
+                        <span class="text-[10px] mafia-text-gold font-bold">→</span>
+                    `;
+                    div.onclick = () => showIndividualHistory(u);
+                    container.appendChild(div);
+                });
+            });
+        }
+
+        function showIndividualHistory(user) {
+            document.getElementById('history-target-name').innerText = user.rpName;
+            const body = document.getElementById('individual-logs-body');
+            body.innerHTML = '';
+
+            const filtered = allLogs.filter(l => l.userCitizenId === user.citizenId);
+
+            if(filtered.length === 0) {
+                body.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-slate-500 italic">Nenhuma atividade registada para este membro.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(l => {
+                const date = l.timestamp ? new Date(l.timestamp.seconds * 1000).toLocaleDateString() : '...';
+                body.innerHTML += `
+                    <tr>
+                        <td class="py-3 text-slate-500 font-mono">${date}</td>
+                        <td class="py-3 font-bold ${l.type === '+' ? 'text-green-600' : 'text-red-700'}">${l.type === '+' ? 'DEPÓSITO' : 'RETIRADA'}</td>
+                        <td class="py-3 text-slate-300">${l.item}</td>
+                        <td class="py-3 text-center font-black mafia-text-gold">x${l.qty}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- RENDERIZAÇÃO ---
+        function renderInventory(items) {
             const grid = document.getElementById('inventory-grid');
-            const inv = STORE.get('inventory');
             grid.innerHTML = '';
-            inv.filter(i => i.quantity > 0).forEach(i => {
+            items.filter(i => i.quantity > 0).forEach(i => {
                 grid.innerHTML += `
                     <div class="mafia-card p-6 text-center border-t border-white/5">
                         <div class="text-4xl mb-4">${i.icon}</div>
@@ -325,26 +382,25 @@
             });
         }
 
-        function renderLibrary() {
+        function renderLibrary(lib) {
             const select = document.getElementById('move-item-select');
             const list = document.getElementById('library-list');
-            const lib = STORE.get('library');
             list.innerHTML = '';
             select.innerHTML = '<option value="">Selecionar Item...</option>';
-            lib.forEach(item => {
+            lib.sort((a,b) => a.label.localeCompare(b.label)).forEach(item => {
                 select.innerHTML += `<option value="${item.id}">${item.icon} ${item.label}</option>`;
                 list.innerHTML += `<div class="bg-black/40 border border-white/5 px-3 py-1 text-[10px] uppercase text-slate-400">${item.icon} ${item.label}</div>`;
             });
         }
 
-        function renderLogs() {
+        function renderLogs(logs) {
             const body = document.getElementById('logs-table-body');
-            const logs = STORE.get('logs');
             body.innerHTML = '';
-            [...logs].reverse().slice(0, 15).forEach(l => {
+            logs.slice(0, 20).forEach(l => {
+                const date = l.timestamp ? new Date(l.timestamp.seconds * 1000).toLocaleTimeString() : '...';
                 body.innerHTML += `
                     <tr>
-                        <td class="p-4 text-[10px] text-slate-500 font-mono">${l.time}</td>
+                        <td class="p-4 text-[10px] text-slate-500 font-mono">${date}</td>
                         <td class="p-4 text-xs font-bold text-slate-300">${l.user}</td>
                         <td class="p-4 text-[10px] font-black ${l.type === '+' ? 'text-green-700' : 'text-red-800'}">${l.type === '+' ? 'ABASTECEU' : 'RETIROU'}</td>
                         <td class="p-4 text-xs italic">${l.item}</td>
@@ -353,76 +409,108 @@
             });
         }
 
-        window.processMovement = () => {
+        // --- AÇÕES ---
+        async function processMovement() {
             const id = document.getElementById('move-item-select').value;
             const qty = parseInt(document.getElementById('move-qty').value);
             const action = document.getElementById('move-action').value;
             if(!id || isNaN(qty) || qty <= 0) return notify("Dados inválidos.", "error");
 
-            let inv = STORE.get('inventory');
-            let lib = STORE.get('library');
-            const itemBase = lib.find(l => l.id === id);
-            let itemInv = inv.find(i => i.id === id);
+            const itemRef = publicDocPath('inventory', id);
+            const libSnap = await getDoc(publicDocPath('library', id));
+            const itemSnap = await getDoc(itemRef);
 
-            if(!itemInv) {
-                itemInv = { ...itemBase, quantity: 0 };
-                inv.push(itemInv);
-            }
+            const itemData = libSnap.data();
+            let currentQty = itemSnap.exists() ? itemSnap.data().quantity : 0;
 
-            if(action === 'withdraw' && itemInv.quantity < qty) return notify("Estoque insuficiente.", "error");
+            if(action === 'withdraw' && currentQty < qty) return notify("Stock insuficiente.", "error");
 
-            itemInv.quantity += (action === 'deposit' ? qty : -qty);
-            STORE.save('inventory', inv);
+            const newQty = action === 'deposit' ? currentQty + qty : currentQty - qty;
 
-            const logs = STORE.get('logs');
-            logs.push({
-                time: new Date().toLocaleTimeString(),
+            await setDoc(itemRef, { ...itemData, quantity: newQty }, { merge: true });
+
+            await addDoc(publicDataPath('logs'), {
                 user: currentUser.rpName,
+                userCitizenId: currentUser.citizenId, // ID guardado para filtro de gestão
+                item: itemData.label,
+                qty: qty,
                 type: action === 'deposit' ? '+' : '-',
-                item: itemBase.label,
-                qty: qty
+                timestamp: serverTimestamp()
             });
-            STORE.save('logs', logs);
 
-            renderInventory();
-            renderLogs();
             notify("Baú atualizado.", "success");
-        };
+            document.getElementById('move-qty').value = '';
+        }
 
-        window.registerNewItem = () => {
+        async function registerNewItem() {
             const name = document.getElementById('new-item-name').value.trim();
             const icon = document.getElementById('new-item-icon').value || "📦";
             if(!name) return;
-
-            const lib = STORE.get('library');
             const id = name.toLowerCase().replace(/\s+/g, '_');
-            if(lib.some(l => l.id === id)) return notify("Item já existe.", "error");
-
-            lib.push({ id, label: name, icon });
-            STORE.save('library', lib);
-            renderLibrary();
+            await setDoc(publicDocPath('library', id), { id, label: name, icon });
             document.getElementById('new-item-name').value = '';
-            notify("Catálogo atualizado.", "success");
-        };
-
-        function loadNotes() {
-            document.getElementById('shared-notes').value = localStorage.getItem('falcone_notes') || "";
+            notify("Item adicionado ao catálogo.", "success");
         }
 
+        async function handleLogin() {
+            const cid = document.getElementById('login-citizenid').value;
+            if(!cid) return;
+            const userSnap = await getDoc(publicDocPath('users', cid));
+            if(!userSnap.exists()) return notify("ID inexistente.", "error");
+
+            const user = userSnap.data();
+            if(user.role !== 'Membro') {
+                const passBox = document.getElementById('login-admin-box');
+                const passInput = document.getElementById('login-admin-pass');
+                if(passBox.classList.contains('hidden')) {
+                    passBox.classList.remove('hidden');
+                    return notify("Chave administrativa necessária.", "warning");
+                }
+                if(passInput.value !== ADMIN_PASSCODE) return notify("Chave incorreta.", "error");
+            }
+
+            currentUser = user;
+            sessionStorage.setItem('mafia_user', JSON.stringify(user));
+            initDashboard();
+        }
+
+        async function handleRegister() {
+            const rpName = document.getElementById('reg-rpname').value.trim();
+            const cid = document.getElementById('reg-citizenid').value.trim();
+            const role = document.getElementById('reg-role').value;
+            const pass = document.getElementById('reg-admin-pass').value;
+
+            if(!rpName || !cid) return notify("Campos vazios.", "error");
+            if(role !== 'Membro' && pass !== ADMIN_PASSCODE) return notify("Senha de autorização errada.", "error");
+
+            const userRef = publicDocPath('users', cid);
+            if((await getDoc(userRef)).exists()) return notify("ID já registado.", "error");
+
+            const newUser = { rpName, citizenId: cid, role };
+            await setDoc(userRef, newUser);
+            currentUser = newUser;
+            sessionStorage.setItem('mafia_user', JSON.stringify(newUser));
+            initDashboard();
+        }
+
+        // --- UTILS ---
+        let notesTimeout;
         document.getElementById('shared-notes').addEventListener('input', (e) => {
-            localStorage.setItem('falcone_notes', e.target.value);
+            document.getElementById('saving-notes').classList.remove('hidden');
+            clearTimeout(notesTimeout);
+            notesTimeout = setTimeout(async () => {
+                await setDoc(publicDocPath('metadata', 'notes'), { content: e.target.value }, { merge: true });
+                document.getElementById('saving-notes').classList.add('hidden');
+            }, 1000);
         });
 
-        window.clearNotes = () => {
-            if(confirm("Deseja mesmo limpar o quadro?")) {
-                localStorage.removeItem('falcone_notes');
-                document.getElementById('shared-notes').value = "";
-                notify("Quadro limpo.", "success");
-            }
+        window.toggleAuth = (m) => {
+            document.getElementById('login-form').classList.toggle('hidden', m==='register');
+            document.getElementById('register-form').classList.toggle('hidden', m==='login');
         };
 
         window.showSection = (s) => {
-            ['inventory', 'logs', 'manage', 'notes'].forEach(id => {
+            ['inventory', 'logs', 'manage', 'notes', 'admin'].forEach(id => {
                 const section = document.getElementById(id + '-section');
                 if(section) section.classList.toggle('hidden', id !== s);
                 const tab = document.getElementById('tab-' + id);
@@ -430,22 +518,28 @@
             });
         };
 
+        window.clearNotes = async () => {
+            if(confirm("Limpar quadro?")) await setDoc(publicDocPath('metadata', 'notes'), { content: "" });
+        };
+
+        window.logout = () => { sessionStorage.removeItem('mafia_user'); location.reload(); };
+
         function notify(m, t) {
             const d = document.createElement('div');
             let color = 'border-amber-600 text-amber-500';
             if(t==='error') color = 'border-red-600 text-red-400 bg-red-950';
             if(t==='warning') color = 'border-blue-600 text-blue-400 bg-blue-950';
-
             d.className = `fixed bottom-6 right-6 px-6 py-3 border-l-4 text-[10px] z-[300] shadow-2xl bg-black ${color}`;
             d.innerText = m.toUpperCase();
             document.body.appendChild(d);
             setTimeout(() => d.remove(), 3000);
         }
 
-        window.onload = () => {
-            if(currentUser) initDashboard();
-            else document.getElementById('auth-screen').classList.remove('hidden');
-        };
+        document.getElementById('btn-login').onclick = handleLogin;
+        document.getElementById('btn-register').onclick = handleRegister;
+        document.getElementById('btn-process-move').onclick = processMovement;
+        document.getElementById('btn-register-item').onclick = registerNewItem;
+        document.getElementById('reg-role').onchange = (e) => document.getElementById('reg-admin-key-box').classList.toggle('hidden', e.target.value === 'Membro');
     </script>
 </body>
 </html>
