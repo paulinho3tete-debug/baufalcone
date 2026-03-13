@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falcone - Sistema de Gestão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
+        
+        :root {
+            --mafia-red: #8b0000;
+            --mafia-gold: #c5a059;
+            --mafia-dark: #0a0a0a;
+            --mafia-slate: #1a1a1a;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--mafia-dark); 
+            color: #e2e8f0;
+            background-image: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .mafia-font { 
+            font-family: 'Cinzel', serif; 
+            letter-spacing: 1px;
+        }
+
+        .mafia-card { 
+            background: linear-gradient(145deg, #161616, #0f0f0f);
+            border: 1px solid #2a2a2a;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .mafia-border-gold { border-color: var(--mafia-gold); }
+        .mafia-text-gold { color: var(--mafia-gold); }
+        
+        .mafia-btn-red {
+            background: linear-gradient(to bottom, #8b0000, #5a0000);
+            border: 1px solid #4a0000;
+            transition: all 0.3s ease;
+        }
+        .mafia-btn-red:hover {
+            filter: brightness(1.2);
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
+        }
+
+        .tab-active { 
+            color: var(--mafia-gold);
+            border-bottom: 2px solid var(--mafia-gold);
+            text-shadow: 0 0 10px rgba(197, 160, 89, 0.3);
+        }
+
+        input, select, textarea {
+            background-color: #0f0f0f !important;
+            border: 1px solid #333 !important;
+            color: #ccc !important;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--mafia-gold) !important;
+            outline: none;
+        }
+
+        .smoke-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            opacity: 0.05;
+            background: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
+            z-index: -1;
+        }
+
+        .loader {
+            border: 2px solid #222;
+            border-top: 2px solid var(--mafia-gold);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .item-slot {
+            background: #111;
+            border: 1px double #333;
+            transition: all 0.3s ease;
+        }
+        .item-slot:hover {
+            border-color: var(--mafia-gold);
+            background: #161616;
+        }
+
+        /* Estilo do Bloco de Notas */
+        #shared-notes {
+            min-height: 400px;
+            font-family: 'Courier New', Courier, monospace;
+            line-height: 1.6;
+            background-image: linear-gradient(#1a1a1a 1.1em, #222 1.2em);
+            background-size: 100% 1.2em;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="smoke-bg"></div>
+    
+    <!-- Carregamento -->
+    <div id="loading-overlay" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center transition-opacity duration-500">
+        <h2 class="mafia-font text-2xl mafia-text-gold animate-pulse mb-4 uppercase">Sincronizando com a Cúpula...</h2>
+        <div class="loader"></div>
+    </div>
+
+    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto opacity-0 transition-opacity duration-500">
+        
+        <!-- LOGIN / REGISTO -->
+        <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 hidden px-4">
+            <div class="mafia-card p-8 md:p-10 rounded-none border-t-4 border-b-4 mafia-border-gold w-full max-w-md shadow-2xl">
+                <div class="text-center mb-8">
+                    <h2 class="text-4xl font-black mafia-text-gold uppercase mb-2">Falcone</h2>
+                    <div class="h-px bg-gradient-to-r from-transparent via-[#c5a059] to-transparent w-full mb-4"></div>
+                    <p id="auth-title" class="text-slate-500 text-[10px] italic tracking-widest uppercase font-bold">Acesso Restrito à Famiglia</p>
+                </div>
+
+                <!-- Login -->
+                <div id="login-form" class="space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Passaporte (ID)</label>
+                        <input type="number" id="login-citizenid" placeholder="ID da Cidade" class="w-full rounded-none px-4 py-2">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">
+                        Entrar na Armaria
+                    </button>
+                    <div class="text-center">
+                        <button onclick="toggleAuth('register')" class="text-[9px] text-slate-500 hover:text-white uppercase tracking-widest underline">Ainda não tens conta? Regista-te</button>
+                    </div>
+                </div>
+
+                <!-- Registo -->
+                <div id="register-form" class="space-y-5 hidden">
+                    <div>
+                        <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Nome de Batismo (RP)</label>
+                        <input type="text" id="reg-rpname" placeholder="Ex: Vito Scaletta" class="w-full rounded-none px-4 py-2">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Passaporte (ID)</label>
+                            <input type="number" id="reg-citizenid" class="w-full rounded-none px-4 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Hierarquia</label>
+                            <select id="reg-role" onchange="checkRegRole(this.value)" class="w-full rounded-none px-4 py-2 text-white text-xs">
+                                <option value="Membro">Soldato (Membro)</option>
+                                <option value="Moderador">Consigliere (Mod)</option>
+                                <option value="Administrador">Don (Admin)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="reg-key-container" class="hidden">
+                        <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase">Chave de Honra</label>
+                        <input type="password" id="reg-admin-key" placeholder="Senha Administrativa" class="w-full border-amber-900/50 rounded-none px-4 py-2 text-amber-500">
+                    </div>
+                    <button onclick="handleRegister()" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">
+                        Prestar Juramento
+                    </button>
+                    <div class="text-center">
+                        <button onclick="toggleAuth('login')" class="text-[9px] text-slate-500 hover:text-white uppercase tracking-widest underline">Já tens conta? Faz Login</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="hidden">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 border-b border-white/5 pb-6">
+                <div>
+                    <h1 class="text-3xl font-black mafia-text-gold uppercase tracking-tighter">La Famiglia <span class="text-white/20">|</span> Armaria</h1>
+                    <div class="flex items-center gap-3 mt-2">
+                        <span id="role-badge" class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border mafia-border-gold mafia-text-gold"></span>
+                        <p class="text-slate-500 text-xs">Associado: <span id="user-display" class="text-slate-300 font-semibold"></span></p>
+                        <span class="text-slate-700">/</span>
+                        <p class="text-slate-500 text-xs">ID: <span id="id-display" class="text-slate-300 font-semibold"></span></p>
+                    </div>
+                </div>
+                <nav class="flex gap-8 w-full md:w-auto overflow-x-auto mafia-font text-sm uppercase font-bold tracking-widest">
+                    <button onclick="showSection('inventory')" id="tab-inventory" class="pb-2 px-1 transition-all tab-active">O Baú</button>
+                    <button onclick="showSection('notes')" id="tab-notes" class="pb-2 px-1 transition-all text-slate-500">Quadro</button>
+                    <button onclick="showSection('logs')" id="tab-logs" class="pb-2 px-1 transition-all text-slate-500">Registos</button>
+                    <button onclick="showSection('manage')" id="tab-manage" class="pb-2 px-1 transition-all text-slate-500 hidden">Catálogo</button>
+                    <button onclick="showSection('permissions')" id="tab-permissions" class="pb-2 px-1 transition-all text-slate-500 hidden">Cúpula</button>
+                </nav>
+                <button onclick="logout()" class="text-red-800 text-[10px] hover:text-red-500 uppercase font-black tracking-widest underline underline-offset-4">Encerrar Sessão</button>
+            </header>
+
+            <!-- Inventário -->
+            <section id="inventory-section" class="space-y-10">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6" id="inventory-grid"></div>
+                <div class="mafia-card p-8 border-l-4 mafia-border-gold">
+                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest flex items-center gap-3">Movimentação</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <select id="move-item-select" class="rounded-none px-4 py-3 text-sm"></select>
+                        <input type="number" id="move-qty" placeholder="Quantidade" class="rounded-none px-4 py-3 text-sm">
+                        <select id="move-action" class="rounded-none px-4 py-3 text-sm">
+                            <option value="deposit">Abastecer (+)</option>
+                            <option value="withdraw">Retirar (-)</option>
+                        </select>
+                        <button onclick="processMovement()" class="mafia-btn-red py-3 text-white mafia-font font-bold uppercase text-sm tracking-widest">Executar</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bloco de Notas (Quadro) -->
+            <section id="notes-section" class="hidden">
+                <div class="mafia-card p-6 md:p-10 border-t border-white/5 relative">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="mafia-font text-xl mafia-text-gold uppercase tracking-widest">Quadro de Avisos</h3>
+                        <div class="flex items-center gap-4">
+                            <span id="save-status" class="text-[9px] uppercase tracking-widest text-slate-600">Sincronizado</span>
+                            <button onclick="clearNotes()" id="clear-notes-btn" class="hidden text-red-900 text-[9px] uppercase font-bold hover:text-red-500 underline">Limpar Quadro</button>
+                        </div>
+                    </div>
+                    <textarea id="shared-notes" placeholder="Escreve aqui planos, códigos ou avisos importantes..." class="w-full p-6 text-slate-300 border-none resize-none focus:ring-0 rounded-none text-sm"></textarea>
+                    <p class="mt-4 text-[9px] text-slate-600 uppercase">Nota: O quadro é partilhado em tempo real com todos os membros online.</p>
+                </div>
+            </section>
+
+            <!-- Logs -->
+            <section id="logs-section" class="hidden">
+                <div class="mafia-card overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-black/50 mafia-text-gold">
+                            <tr><th class="p-5 uppercase text-[11px]">Momento</th><th class="p-5 uppercase text-[11px]">Soldato</th><th class="p-5 uppercase text-[11px]">Tipo</th><th class="p-5 uppercase text-[11px]">Item</th><th class="p-5 text-center text-[11px]">Qtd</th></tr>
+                        </thead>
+                        <tbody id="logs-table-body" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Catálogo (Admin/Mod) -->
+            <section id="manage-section" class="hidden space-y-8">
+                <div class="mafia-card p-8 border-l-4 mafia-border-gold">
+                    <h3 class="mafia-font text-xl mafia-text-gold mb-6 uppercase tracking-widest">Novo Item</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <input type="text" id="new-item-name" placeholder="Nome" class="rounded-none px-4 py-3">
+                        <input type="text" id="new-item-icon" placeholder="Emoji" class="rounded-none px-4 py-3 text-center">
+                        <button onclick="registerNewItem()" class="bg-white/10 hover:bg-white/20 py-3 mafia-font font-bold uppercase text-sm">Registar</button>
+                    </div>
+                </div>
+                <div id="library-list" class="flex flex-wrap gap-2"></div>
+            </section>
+
+            <!-- Cúpula (Admin) -->
+            <section id="permissions-section" class="hidden">
+                <div class="mafia-card p-8">
+                    <table class="w-full text-left">
+                        <thead class="bg-black/50"><tr><th class="p-4">RP</th><th class="p-4">ID</th><th class="p-4">Cargo</th><th class="p-4">Ação</th></tr></thead>
+                        <tbody id="users-table-body" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const MASTER_ADMIN_KEY = "sua_senha_aqui_123";
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mafia-bau-cloud-v2';
+
+        let currentUser = null;
+        let itemLibrary = {};
+        let listenersActive = false;
+        let noteTimeout = null;
+
+        // --- AUTH ---
+        async function connectCloud() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        window.toggleAuth = (m) => {
+            document.getElementById('login-form').classList.toggle('hidden', m==='register');
+            document.getElementById('register-form').classList.toggle('hidden', m==='login');
+            document.getElementById('auth-title').innerText = m==='register' ? "Novo Recrutamento" : "Acesso Restrito à Famiglia";
+        };
+
+        window.checkRegRole = (v) => document.getElementById('reg-key-container').classList.toggle('hidden', v === 'Membro');
+
+        window.handleLogin = async () => {
+            const cid = document.getElementById('login-citizenid').value.trim();
+            if(!cid) return;
+            await connectCloud();
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cid));
+            if(snap.exists()) {
+                currentUser = snap.data();
+                localStorage.setItem('mafia_session_id', cid);
+                initDashboard();
+            } else notify("Passaporte inválido.", "error");
+        };
+
+        window.handleRegister = async () => {
+            const rpName = document.getElementById('reg-rpname').value.trim();
+            const cid = document.getElementById('reg-citizenid').value.trim();
+            const role = document.getElementById('reg-role').value;
+            const key = document.getElementById('reg-admin-key').value;
+
+            if(!rpName || !cid) return;
+            if(role !== 'Membro' && key !== MASTER_ADMIN_KEY) return notify("Chave inválida!", "error");
+
+            await connectCloud();
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', cid);
+            if((await getDoc(userRef)).exists()) return notify("ID já existe.", "error");
+
+            const userData = { rpName, citizenId: cid, role, created: new Date().toISOString() };
+            await setDoc(userRef, userData);
+            currentUser = userData;
+            localStorage.setItem('mafia_session_id', cid);
+            initDashboard();
+        };
+
+        window.logout = () => { localStorage.removeItem('mafia_session_id'); location.reload(); };
+
+        // --- DASHBOARD ---
+        function initDashboard() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('user-display').innerText = currentUser.rpName;
+            document.getElementById('id-display').innerText = currentUser.citizenId;
+            document.getElementById('role-badge').innerText = currentUser.role;
+
+            if(currentUser.role !== 'Membro') {
+                document.getElementById('tab-manage').classList.remove('hidden');
+                document.getElementById('clear-notes-btn').classList.remove('hidden');
+            }
+            if(currentUser.role === 'Administrador') document.getElementById('tab-permissions').classList.remove('hidden');
+            
+            setupRealtime();
+            setupNotesLogic();
+        }
+
+        function setupRealtime() {
+            if (listenersActive) return;
+            listenersActive = true;
+
+            // Notas
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'notes', 'shared'), snap => {
+                if(snap.exists() && document.activeElement !== document.getElementById('shared-notes')) {
+                    document.getElementById('shared-notes').value = snap.data().content || "";
+                }
+            });
+
+            // Inventário
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), snap => {
+                const grid = document.getElementById('inventory-grid');
+                grid.innerHTML = '';
+                snap.forEach(d => {
+                    const i = d.data();
+                    if(i.quantity <= 0) return;
+                    grid.innerHTML += `<div class="item-slot p-6 text-center shadow-2xl"><div class="text-4xl mb-4">${i.icon}</div><div class="text-[9px] font-black mafia-text-gold uppercase mb-1">${i.label}</div><div class="text-3xl font-black text-white">${i.quantity}</div></div>`;
+                });
+            });
+
+            // Catálogo
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'library'), snap => {
+                const select = document.getElementById('move-item-select');
+                const list = document.getElementById('library-list');
+                list.innerHTML = '';
+                select.innerHTML = '<option value="">Objeto...</option>';
+                snap.forEach(d => {
+                    const data = d.data();
+                    itemLibrary[d.id] = data;
+                    select.innerHTML += `<option value="${d.id}">${data.icon} ${data.label}</option>`;
+                    list.innerHTML += `<div class="bg-[#111] border border-white/5 px-3 py-1 text-[10px] uppercase font-bold text-slate-400"><span>${data.icon} ${data.label}</span></div>`;
+                });
+            });
+
+            // Logs
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'logs'), snap => {
+                const body = document.getElementById('logs-table-body');
+                let logs = [];
+                snap.forEach(d => logs.push(d.data()));
+                body.innerHTML = '';
+                logs.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 20).forEach(l => {
+                    body.innerHTML += `<tr><td class="p-4 text-[10px] text-slate-500 font-mono">${new Date(l.timestamp).toLocaleTimeString()}</td><td class="p-4 text-xs font-bold text-slate-300">${l.userRP}</td><td class="p-4 text-[10px] font-black ${l.action.includes('AB') ? 'text-green-800' : 'text-red-900'} uppercase">${l.action}</td><td class="p-4 text-xs italic">${l.item}</td><td class="p-4 text-center font-black mafia-text-gold">x${l.qty}</td></tr>`;
+                });
+            });
+
+            if(currentUser.role === 'Administrador') {
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
+                    const body = document.getElementById('users-table-body');
+                    body.innerHTML = '';
+                    snap.forEach(d => {
+                        const u = d.data();
+                        body.innerHTML += `<tr><td class="p-4 text-sm font-bold text-slate-300">${u.rpName}</td><td class="p-4 text-xs text-slate-500 font-mono">${u.citizenId}</td><td class="p-4"><span class="px-2 py-0.5 border border-white/5 text-[9px] uppercase tracking-widest bg-black text-slate-400">${u.role}</span></td><td class="p-4"><button onclick="deleteAccount('${u.citizenId}')" class="text-red-900 text-[10px] hover:text-red-500 uppercase font-black">Eliminar</button></td></tr>`;
+                    });
+                });
+            }
+        }
+
+        // --- LÓGICA DO BLOCO DE NOTAS ---
+        function setupNotesLogic() {
+            const textarea = document.getElementById('shared-notes');
+            const status = document.getElementById('save-status');
+
+            textarea.addEventListener('input', () => {
+                status.innerText = "A guardar...";
+                status.classList.add('animate-pulse');
+                
+                clearTimeout(noteTimeout);
+                noteTimeout = setTimeout(async () => {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', 'shared'), {
+                        content: textarea.value,
+                        lastEdit: new Date().toISOString(),
+                        author: currentUser.rpName
+                    });
+                    status.innerText = "Sincronizado";
+                    status.classList.remove('animate-pulse');
+                }, 1500);
+            });
+        }
+
+        window.clearNotes = async () => {
+            if(!confirm("Desejas mesmo apagar o quadro todo?")) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', 'shared'), { content: "" });
+            document.getElementById('shared-notes').value = "";
+            notify("Quadro limpo.", "success");
+        };
+
+        // --- OUTRAS ACÇÕES ---
+        window.processMovement = async () => {
+            const key = document.getElementById('move-item-select').value;
+            const qty = parseInt(document.getElementById('move-qty').value);
+            const action = document.getElementById('move-action').value;
+            if(!key || isNaN(qty) || qty <= 0) return;
+
+            const itemRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', key);
+            const snap = await getDoc(itemRef);
+            let current = snap.exists() ? snap.data().quantity : 0;
+            let final = action === 'deposit' ? current + qty : current - qty;
+
+            if(final < 0) return notify("Falta stock!", "error");
+
+            await setDoc(itemRef, { label: itemLibrary[key].label, icon: itemLibrary[key].icon, quantity: final });
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'logs'), {
+                timestamp: new Date().toISOString(), userRP: currentUser.rpName,
+                action: action === 'deposit' ? 'ABASTECEU' : 'RETIROU',
+                item: itemLibrary[key].label, qty
+            });
+            document.getElementById('move-qty').value = '';
+            notify("Baú atualizado.", "success");
+        };
+
+        window.registerNewItem = async () => {
+            const name = document.getElementById('new-item-name').value.trim();
+            const icon = document.getElementById('new-item-icon').value || "📦";
+            if(!name) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'library', name.toLowerCase().replace(/\s+/g,'_')), { label: name, icon });
+            document.getElementById('new-item-name').value = '';
+            notify("Item catalogado.", "success");
+        };
+
+        window.deleteAccount = async (id) => {
+            if(id === currentUser.citizenId) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id));
+            notify("Conta eliminada.", "success");
+        };
+
+        window.showSection = (s) => {
+            ['inventory', 'logs', 'manage', 'permissions', 'notes'].forEach(id => {
+                const el = document.getElementById(`${id}-section`);
+                if(el) el.classList.toggle('hidden', id !== s);
+                const tab = document.getElementById(`tab-${id}`);
+                if(tab) tab.classList.toggle('tab-active', id === s);
+            });
+        };
+
+        async function checkSession() {
+            const sid = localStorage.getItem('mafia_session_id');
+            if(sid) {
+                await connectCloud();
+                const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', sid));
+                if(snap.exists()) { currentUser = snap.data(); initDashboard(); }
+                else document.getElementById('auth-screen').classList.remove('hidden');
+            } else document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('app').style.opacity = '1';
+        }
+
+        function notify(m, t) {
+            const d = document.createElement('div');
+            d.className = `fixed bottom-6 right-6 px-6 py-3 border-l-4 mafia-font text-[10px] z-[300] shadow-2xl ${t==='error'?'bg-red-950 border-red-600 text-red-400':'bg-black border-amber-600 text-amber-500'}`;
+            d.innerText = m;
+            document.body.appendChild(d);
+            setTimeout(() => d.remove(), 4000);
+        }
+
+        window.onload = checkSession;
+    </script>
+</body>
+</html>
