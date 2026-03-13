@@ -86,7 +86,7 @@
     
     <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto transition-opacity duration-500">
         
-        <!-- LOGIN / REGISTO -->
+        <!-- LOGIN / REGISTRO -->
         <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 hidden px-4">
             <div class="mafia-card p-8 md:p-10 rounded-none border-t-4 border-b-4 mafia-border-gold w-full max-w-md shadow-2xl">
                 <div class="text-center mb-8">
@@ -95,10 +95,15 @@
                     <p id="auth-title" class="text-slate-500 text-[10px] italic tracking-widest uppercase font-bold">Acesso Local de Segurança</p>
                 </div>
 
+                <!-- Formulário de Login -->
                 <div id="login-form" class="space-y-5">
                     <div>
                         <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Passaporte (ID)</label>
                         <input type="number" id="login-citizenid" placeholder="ID da Cidade" class="w-full rounded-none px-4 py-2">
+                    </div>
+                    <div id="login-admin-box" class="hidden">
+                        <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase tracking-tighter">Chave de Administração</label>
+                        <input type="password" id="login-admin-pass" placeholder="Senha da Cúpula" class="w-full rounded-none px-4 py-2 border-amber-900">
                     </div>
                     <button onclick="handleLogin()" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Entrar na Armaria</button>
                     <div class="text-center">
@@ -106,6 +111,7 @@
                     </div>
                 </div>
 
+                <!-- Formulário de Registro -->
                 <div id="register-form" class="space-y-5 hidden">
                     <div>
                         <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Nome de Batismo (RP)</label>
@@ -118,12 +124,16 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-tighter">Hierarquia</label>
-                            <select id="reg-role" class="w-full rounded-none px-4 py-2 text-white text-xs">
-                                <option value="Administrador">Don (Admin)</option>
-                                <option value="Moderador">Consigliere (Mod)</option>
+                            <select id="reg-role" onchange="toggleAdminKeyField(this.value)" class="w-full rounded-none px-4 py-2 text-white text-xs">
                                 <option value="Membro">Soldato (Membro)</option>
+                                <option value="Moderador">Consigliere (Mod)</option>
+                                <option value="Administrador">Don (Admin)</option>
                             </select>
                         </div>
+                    </div>
+                    <div id="reg-admin-key-box" class="hidden">
+                        <label class="block text-[10px] font-bold mb-1 text-amber-600 uppercase tracking-tighter">Senha de Autorização</label>
+                        <input type="password" id="reg-admin-pass" placeholder="Chave da Família" class="w-full rounded-none px-4 py-2 border-amber-900">
                     </div>
                     <button onclick="handleRegister()" class="w-full mafia-btn-red py-4 text-white mafia-font font-bold uppercase tracking-widest text-sm">Prestar Juramento</button>
                     <div class="text-center">
@@ -147,7 +157,7 @@
                     <button onclick="showSection('inventory')" id="tab-inventory" class="pb-2 px-1 transition-all tab-active">O Baú</button>
                     <button onclick="showSection('notes')" id="tab-notes" class="pb-2 px-1 transition-all text-slate-500">Quadro</button>
                     <button onclick="showSection('logs')" id="tab-logs" class="pb-2 px-1 transition-all text-slate-500">Registos</button>
-                    <button onclick="showSection('manage')" id="tab-manage" class="pb-2 px-1 transition-all text-slate-500">Catálogo</button>
+                    <button onclick="showSection('manage')" id="tab-manage" class="pb-2 px-1 transition-all text-slate-500 hidden">Catálogo</button>
                 </nav>
                 <button onclick="logout()" class="text-red-800 text-[10px] hover:text-red-500 uppercase font-black tracking-widest underline">Encerrar Sessão</button>
             </header>
@@ -172,9 +182,9 @@
                 <div class="mafia-card p-6 md:p-10 border-t border-white/5 relative">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="mafia-font text-xl mafia-text-gold uppercase tracking-widest">Quadro de Avisos</h3>
-                        <button onclick="clearNotes()" class="text-red-900 text-[9px] uppercase font-bold hover:text-red-500 underline">Limpar Quadro</button>
+                        <button id="admin-clear-btn" onclick="clearNotes()" class="hidden text-red-900 text-[9px] uppercase font-bold hover:text-red-500 underline">Limpar Quadro</button>
                     </div>
-                    <textarea id="shared-notes" placeholder="Escreve aqui planos ou avisos..." class="w-full p-6 text-slate-300 border-none resize-none focus:ring-0 rounded-none text-sm"></textarea>
+                    <textarea id="shared-notes" placeholder="Escreva aqui planos ou avisos..." class="w-full p-6 text-slate-300 border-none resize-none focus:ring-0 rounded-none text-sm"></textarea>
                 </div>
             </section>
 
@@ -195,7 +205,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <input type="text" id="new-item-name" placeholder="Nome do Item" class="rounded-none px-4 py-3">
                         <input type="text" id="new-item-icon" placeholder="Emoji (Ex: 🔫)" class="rounded-none px-4 py-3 text-center">
-                        <button onclick="registerNewItem()" class="bg-white/10 hover:bg-white/20 py-3 mafia-font font-bold uppercase text-sm">Registar no Catálogo</button>
+                        <button onclick="registerNewItem()" class="bg-white/10 hover:bg-white/20 py-3 mafia-font font-bold uppercase text-sm">Registrar no Catálogo</button>
                     </div>
                 </div>
                 <div id="library-list" class="flex flex-wrap gap-2"></div>
@@ -204,7 +214,9 @@
     </div>
 
     <script>
-        // --- DATA STORE (LOCAL STORAGE) ---
+        // --- SENHA MESTRE PARA ADMINS ---
+        const ADMIN_PASSCODE = "sua_senha_aqui_123"; 
+
         const STORE = {
             get: (key) => JSON.parse(localStorage.getItem('falcone_' + key)) || [],
             save: (key, data) => localStorage.setItem('falcone_' + key, JSON.stringify(data)),
@@ -213,10 +225,14 @@
 
         let currentUser = JSON.parse(sessionStorage.getItem('mafia_user')) || null;
 
-        // --- AUTH ---
+        // --- LÓGICA DE AUTENTICAÇÃO ---
         window.toggleAuth = (m) => {
             document.getElementById('login-form').classList.toggle('hidden', m==='register');
             document.getElementById('register-form').classList.toggle('hidden', m==='login');
+        };
+
+        window.toggleAdminKeyField = (role) => {
+            document.getElementById('reg-admin-key-box').classList.toggle('hidden', role === 'Membro');
         };
 
         window.handleLogin = () => {
@@ -224,22 +240,43 @@
             const users = STORE.get('users');
             const user = users.find(u => u.citizenId === cid);
             
-            if(user) {
-                currentUser = user;
-                sessionStorage.setItem('mafia_user', JSON.stringify(user));
-                initDashboard();
-            } else notify("ID não encontrado neste dispositivo.", "error");
+            if(!user) return notify("ID não encontrado.", "error");
+
+            // Se for admin/mod, exige a senha no login
+            if(user.role !== 'Membro') {
+                const passBox = document.getElementById('login-admin-box');
+                const passInput = document.getElementById('login-admin-pass');
+                
+                if(passBox.classList.contains('hidden')) {
+                    passBox.classList.remove('hidden');
+                    notify("Confirme a senha administrativa.", "warning");
+                    return;
+                }
+
+                if(passInput.value !== ADMIN_PASSCODE) {
+                    return notify("Senha administrativa incorreta.", "error");
+                }
+            }
+
+            currentUser = user;
+            sessionStorage.setItem('mafia_user', JSON.stringify(user));
+            initDashboard();
         };
 
         window.handleRegister = () => {
             const rpName = document.getElementById('reg-rpname').value.trim();
             const cid = document.getElementById('reg-citizenid').value.trim();
             const role = document.getElementById('reg-role').value;
+            const pass = document.getElementById('reg-admin-pass').value;
 
-            if(!rpName || !cid) return notify("Preencha tudo.", "error");
+            if(!rpName || !cid) return notify("Preencha todos os campos.", "error");
+            
+            if(role !== 'Membro' && pass !== ADMIN_PASSCODE) {
+                return notify("Chave de autorização inválida!", "error");
+            }
 
             const users = STORE.get('users');
-            if(users.some(u => u.citizenId === cid)) return notify("ID já registado.", "error");
+            if(users.some(u => u.citizenId === cid)) return notify("ID já registrado.", "error");
 
             const newUser = { rpName, citizenId: cid, role };
             users.push(newUser);
@@ -262,6 +299,12 @@
             document.getElementById('user-display').innerText = currentUser.rpName;
             document.getElementById('role-badge').innerText = currentUser.role;
             
+            // Permissões Visuais
+            if(currentUser.role !== 'Membro') {
+                document.getElementById('tab-manage').classList.remove('hidden');
+                document.getElementById('admin-clear-btn').classList.remove('hidden');
+            }
+
             renderInventory();
             renderLogs();
             renderLibrary();
@@ -286,10 +329,8 @@
             const select = document.getElementById('move-item-select');
             const list = document.getElementById('library-list');
             const lib = STORE.get('library');
-            
             list.innerHTML = '';
             select.innerHTML = '<option value="">Selecionar Item...</option>';
-            
             lib.forEach(item => {
                 select.innerHTML += `<option value="${item.id}">${item.icon} ${item.label}</option>`;
                 list.innerHTML += `<div class="bg-black/40 border border-white/5 px-3 py-1 text-[10px] uppercase text-slate-400">${item.icon} ${item.label}</div>`;
@@ -300,7 +341,7 @@
             const body = document.getElementById('logs-table-body');
             const logs = STORE.get('logs');
             body.innerHTML = '';
-            logs.reverse().slice(0, 15).forEach(l => {
+            [...logs].reverse().slice(0, 15).forEach(l => {
                 body.innerHTML += `
                     <tr>
                         <td class="p-4 text-[10px] text-slate-500 font-mono">${l.time}</td>
@@ -312,12 +353,10 @@
             });
         }
 
-        // --- ACTIONS ---
         window.processMovement = () => {
             const id = document.getElementById('move-item-select').value;
             const qty = parseInt(document.getElementById('move-qty').value);
             const action = document.getElementById('move-action').value;
-            
             if(!id || isNaN(qty) || qty <= 0) return notify("Dados inválidos.", "error");
 
             let inv = STORE.get('inventory');
@@ -330,12 +369,11 @@
                 inv.push(itemInv);
             }
 
-            if(action === 'withdraw' && itemInv.quantity < qty) return notify("Stock insuficiente.", "error");
+            if(action === 'withdraw' && itemInv.quantity < qty) return notify("Estoque insuficiente.", "error");
 
             itemInv.quantity += (action === 'deposit' ? qty : -qty);
             STORE.save('inventory', inv);
 
-            // Log
             const logs = STORE.get('logs');
             logs.push({
                 time: new Date().toLocaleTimeString(),
@@ -348,11 +386,11 @@
 
             renderInventory();
             renderLogs();
-            notify("Operação concluída.", "success");
+            notify("Baú atualizado.", "success");
         };
 
         window.registerNewItem = () => {
-            const name = document.getElementById('new-item-name').value;
+            const name = document.getElementById('new-item-name').value.trim();
             const icon = document.getElementById('new-item-icon').value || "📦";
             if(!name) return;
 
@@ -363,10 +401,10 @@
             lib.push({ id, label: name, icon });
             STORE.save('library', lib);
             renderLibrary();
+            document.getElementById('new-item-name').value = '';
             notify("Catálogo atualizado.", "success");
         };
 
-        // --- NOTES ---
         function loadNotes() {
             document.getElementById('shared-notes').value = localStorage.getItem('falcone_notes') || "";
         }
@@ -376,22 +414,29 @@
         });
 
         window.clearNotes = () => {
-            if(confirm("Apagar quadro?")) {
+            if(confirm("Deseja mesmo limpar o quadro?")) {
                 localStorage.removeItem('falcone_notes');
                 document.getElementById('shared-notes').value = "";
+                notify("Quadro limpo.", "success");
             }
         };
 
         window.showSection = (s) => {
             ['inventory', 'logs', 'manage', 'notes'].forEach(id => {
-                document.getElementById(id + '-section').classList.toggle('hidden', id !== s);
-                document.getElementById('tab-' + id).classList.toggle('tab-active', id === s);
+                const section = document.getElementById(id + '-section');
+                if(section) section.classList.toggle('hidden', id !== s);
+                const tab = document.getElementById('tab-' + id);
+                if(tab) tab.classList.toggle('tab-active', id === s);
             });
         };
 
         function notify(m, t) {
             const d = document.createElement('div');
-            d.className = `fixed bottom-6 right-6 px-6 py-3 border-l-4 text-[10px] z-[300] shadow-2xl ${t==='error'?'bg-red-950 border-red-600 text-red-400':'bg-black border-amber-600 text-amber-500'}`;
+            let color = 'border-amber-600 text-amber-500';
+            if(t==='error') color = 'border-red-600 text-red-400 bg-red-950';
+            if(t==='warning') color = 'border-blue-600 text-blue-400 bg-blue-950';
+
+            d.className = `fixed bottom-6 right-6 px-6 py-3 border-l-4 text-[10px] z-[300] shadow-2xl bg-black ${color}`;
             d.innerText = m.toUpperCase();
             document.body.appendChild(d);
             setTimeout(() => d.remove(), 3000);
